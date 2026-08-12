@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // A sintaxe clássica e perfeita está de volta!
+}
+
+model Card {
+  id            String            @id @default(uuid())
+  id_oficial    String            @unique
+  id_global     String?           // O nosso Fio Invisível
+  numero        String
+  raridade      String
+  colecao       String
+  criado_em     DateTime          @default(now())
+  atualizado_em DateTime          @updatedAt
+
+  traducoes     CardTranslation[]
+}
+
+model CardTranslation {
+  id            String   @id @default(uuid())
+  card_id       String
+  language      String
+  nome          String
+  descricao     String
+  url_imagem    String
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  card          Card     @relation(fields: [card_id], references: [id], onDelete: Cascade)
+
+  @@unique([card_id, language])
+}

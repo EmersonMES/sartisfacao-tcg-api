@@ -1,0 +1,14 @@
+# Pastas pesadas
+node_modules/
+
+# Ficheiros de senhas e variáveis locais
+.env
+
+# Ficheiros de log e erros
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ficheiros compilados (se houver)
+dist/
+build/

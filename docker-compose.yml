@@ -1,0 +1,11 @@
+services:
+  db:
+    image: postgres:16
+    container_name: sartisfacao-db
+    restart: always
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=sartisfacao

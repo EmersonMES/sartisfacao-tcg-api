@@ -1,0 +1,37 @@
+{
+  "name": "sartisfacao",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "scraper:master": "tsx src/master-scraper.ts",
+    "scraper:jp": "tsx src/scraper-oriental.ts",
+    "dump": "tsx src/api-dump.ts",
+    "dump:scrydex": "tsx src/scrydex-dump.ts",
+    "importar": "tsx src/importador-manual.ts",
+    "tcgdex": "tsx src/tcgdex-importer.ts",
+    "corrigir": "tsx src/importador-cirurgico.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@prisma/adapter-pg": "^7.9.0",
+    "@prisma/client": "5.22.0",
+    "fastify": "^5.10.0",
+    "pg": "^8.22.0",
+    "playwright": "^1.61.1"
+  },
+  "devDependencies": {
+    "@prisma/config": "^7.8.0",
+    "@types/node": "^26.1.0",
+    "@types/pg": "^8.20.0",
+    "dotenv": "^17.4.2",
+    "prisma": "5.22.0",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3"
+  }
+}

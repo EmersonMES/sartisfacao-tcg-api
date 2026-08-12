@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sartisfação TCG - Painel de Controle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Paleta de Cores Elegantes para os Status */
+        .bg-100 { background-color: #4ade80; color: #064e3b; } /* Verde de Sucesso */
+        .bg-partial { background-color: #c4b5fd; color: #2e1065; } /* Roxo de Progresso */
+        .bg-zero { background-color: #fecaca; color: #7f1d1d; } /* Vermelho de Vazio */
+        
+        /* A Mágica de Layout que impede o esmagamento */
+        .table-container {
+            max-height: 85vh; /* Permite scroll para baixo */
+            overflow: auto; /* Permite scroll para a direita */
+        }
+        
+        table { 
+            border-collapse: separate; 
+            border-spacing: 0; 
+            width: 100%; 
+            min-width: max-content; /* Impede a tabela de encolher! */
+        }
+        
+        th, td { 
+            border-right: 1px solid #cbd5e1; 
+            border-bottom: 1px solid #cbd5e1; 
+            text-align: center; 
+            padding: 8px 12px; 
+            font-size: 0.85rem; 
+        }
+        
+        th { background-color: #f1f5f9; color: #0f172a; border-top: 1px solid #cbd5e1; }
+        
+        /* Congela a Primeira Coluna (Nomes das Coleções) */
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background-color: #ffffff;
+            z-index: 10;
+            border-left: 1px solid #cbd5e1;
+            box-shadow: 3px 0 5px rgba(0,0,0,0.05);
+        }
+        
+        /* Congela o Cabeçalho (Idiomas) */
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        /* O Canto Superior Esquerdo precisa sobrepor tudo */
+        thead th.sticky-col {
+            z-index: 15;
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen p-4 md:p-8 font-sans">
+
+    <div class="max-w-[98%] mx-auto">
+        <h1 class="text-4xl font-extrabold text-center mb-2 text-slate-800">Sartisfação TCG - Progressão</h1>
+        <p class="text-center text-slate-500 mb-6 font-medium">Centro de Comando do Multiverso</p>
+
+        <!-- Container Limitador que gera o Scroll -->
+        <div class="table-container shadow-2xl rounded-xl bg-white border border-slate-300">
+            <table id="tabelaProgresso">
+                <thead id="cabecalhoTabela">
+                    <!-- Gerado dinamicamente -->
+                </thead>
+                <tbody id="corpoTabela">
+                    <!-- Gerado dinamicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Inteligência das Cores
+        function obterClasseCor(valor, total) {
+            if (total === 0 || valor === 0) return 'bg-zero';
+            if (valor >= total) return 'bg-100'; // 100% ou mais
+            return 'bg-partial'; // Alguma coisa pelo meio
+        }
+
+        // Formatação Limpa dos Textos
+        function formatarCelula(valor, total) {
+            if (total === 0) return `<span class="font-bold">0.00%</span><br><span class="text-[10px] opacity-75">(0)</span>`;
+            const percent = ((valor / total) * 100).toFixed(2);
+            return `<span class="font-bold">${percent}%</span><br><span class="text-[10px] opacity-75">(${valor} / ${total})</span>`;
+        }
+
+        async function carregarDashboard() {
+            try {
+                const resposta = await fetch('http://localhost:3000/api/dashboard');
+                const dados = await resposta.json();
+
+                const idiomas = dados.idiomasAtivos;
+                const colecoes = dados.colecoes;
+
+                const thead = document.getElementById('cabecalhoTabela');
+                const tbody = document.getElementById('corpoTabela');
+
+                // 1. MONTAGEM DO CABEÇALHO DUPLO
+                let linha1 = `<tr><th rowspan="2" class="sticky-col min-w-[220px] text-left pl-4 font-bold text-base">Coleções</th>`;
+                let linha2 = `<tr>`;
+
+                idiomas.forEach(lang => {
+                    linha1 += `<th colspan="2" class="text-sm font-bold text-slate-800 bg-slate-200">${lang}</th>`;
+                    linha2 += `<th class="bg-slate-100 text-slate-600">Cartas</th><th class="bg-slate-100 text-slate-600">Imagens</th>`;
+                });
+                linha1 += `</tr>`;
+                linha2 += `</tr>`;
+                
+                thead.innerHTML = linha1 + linha2;
+
+                // 2. MONTAGEM DAS LINHAS DE COLEÇÕES
+                let htmlCorpo = '';
+
+                colecoes.forEach(set => {
+                    htmlCorpo += `<tr class="hover:bg-slate-50 transition-colors">`;
+                    
+                    // Coluna Fixa do Nome
+                    htmlCorpo += `<td class="sticky-col text-left">
+                                    <div class="font-bold text-slate-800">${set.nome}</div>
+                                    <div class="text-xs text-slate-500 font-medium">${set.totalOficial} cartas oficiais</div>
+                                  </td>`;
+
+                    // Colunas de Dados dos Idiomas
+                    idiomas.forEach(lang => {
+                        const dadosLang = set.idiomas[lang] || { cards: 0, images: 0 };
+                        
+                        const corCards = obterClasseCor(dadosLang.cards, set.totalOficial);
+                        htmlCorpo += `<td class="${corCards}">${formatarCelula(dadosLang.cards, set.totalOficial)}</td>`;
+                        
+                        const corImages = obterClasseCor(dadosLang.images, set.totalOficial);
+                        htmlCorpo += `<td class="${corImages}">${formatarCelula(dadosLang.images, set.totalOficial)}</td>`;
+                    });
+
+                    htmlCorpo += `</tr>`;
+                });
+
+                tbody.innerHTML = htmlCorpo;
+
+            } catch (erro) {
+                console.error("Erro:", erro);
+                document.getElementById('cabecalhoTabela').innerHTML = `<tr><td class="text-red-500 font-bold p-8 text-center bg-white sticky-col">❌ Erro de Ligação. Verifique se a sua API (npm run dev) está ligada!</td></tr>`;
+            }
+        }
+
+        carregarDashboard();
+    </script>
+</body>
+</html>

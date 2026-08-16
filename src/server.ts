@@ -2,10 +2,18 @@ import 'dotenv/config'; // Garante que a variável DATABASE_URL seja lida corret
 import Fastify from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import cors from '@fastify/cors';
+import express from 'express';
+import cors from 'cors';
+
+const app = express();
 
 const prisma = new PrismaClient();
 
 const app = Fastify({ logger: true });
+
+app.use(cors()); 
+
+app.use(express.json());
 
 // Rota de boas-vindas
 app.get('/', async (request, reply) => {

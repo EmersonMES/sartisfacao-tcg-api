@@ -158,7 +158,7 @@
             if(velhaBarra) velhaBarra.remove();
 
             try {
-                const resposta = await fetch(`http://localhost:3000/cartas/busca/${nomePokemon}`);
+                const resposta = await fetch(`https://sartisfacao-api.onrender.com/cartas/busca/${nomePokemon}`);
                 const dados = await resposta.json();
 
                 if (!resposta.ok) {

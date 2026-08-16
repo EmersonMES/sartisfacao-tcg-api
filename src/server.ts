@@ -9,8 +9,6 @@ const app = express();
 
 const prisma = new PrismaClient();
 
-const app = Fastify({ logger: true });
-
 app.use(cors()); 
 
 app.use(express.json());

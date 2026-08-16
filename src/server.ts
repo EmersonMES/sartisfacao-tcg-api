@@ -1,5 +1,5 @@
 import 'dotenv/config'; // Garante que a variável DATABASE_URL seja lida corretamente
-import Fastify from 'fastify';
+import fastify from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import cors from '@fastify/cors';
 
@@ -18,11 +18,6 @@ app.get('/', async (request, reply) => {
     status: 'Online',
     mensagem: 'Sistema inicializado. Aguardando inserção de dados...'
   };
-});
-
-// <-- 2. Registar o CORS para permitir acessos externos
-app.register(cors, {
-  origin: '*', 
 });
 
 // ROTA POST: Injetor Inteligente do Multiverso

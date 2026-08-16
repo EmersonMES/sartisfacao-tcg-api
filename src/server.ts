@@ -324,14 +324,23 @@ app.get('/api/dashboard', async (request: any, reply) => {
     }
 });
 
+// ==========================================
+// INICIALIZAÇÃO DO SERVIDOR (NUVEM E LOCAL)
+// ==========================================
 const start = async () => {
-  try {
-    await app.listen({ port: 3000 });
-    console.log('🔴⚪ Sartisfação API rodando na porta 3000!');
-  } catch (err) {
-    app.log.error(err);
-    process.exit(1);
-  }
+    try {
+        // Na nuvem, o Render define a porta (process.env.PORT). Se não existir, usa a 3000.
+        const porta = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+        
+        // '0.0.0.0' é a magia que permite que o servidor seja acessado pela internet!
+        await app.listen({ port: porta, host: '0.0.0.0' });
+        console.log(`\n🚀 Servidor do Multiverso a rodar na porta ${porta}`);
+    } catch (erro) {
+        console.error("❌ Erro ao iniciar servidor:", erro);
+        process.exit(1);
+    }
 };
+
+start();
 
 start();

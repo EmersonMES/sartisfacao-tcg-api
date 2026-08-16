@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "npx tsx src/server.ts",
     "dev": "tsx watch src/server.ts",
     "scraper:master": "tsx src/master-scraper.ts",
     "scraper:jp": "tsx src/scraper-oriental.ts",

@@ -107,11 +107,20 @@ app.get('/cartas/:id', async (request: any, reply) => {
 app.get('/cartas/global/:id_global', async (request: any, reply) => {
   const idGlobal = request.params.id_global; // Ex: paradox-rift-1
 
-  // Usamos findMany para trazer TODAS as versões físicas mundiais desta carta
-  const cartas = await prisma.card.findMany({
-    where: { id_global: idGlobal },
-    include: { traducoes: true } // Traz os 6 idiomas acoplados a cada versão!
-  });
+  /// O PEDIDO NINJA (Apenas os ossos, sem a gordura!)
+        const cartas = await prisma.card.findMany({
+            select: {
+                colecao: true,
+                id_oficial: true,
+                numero: true,
+                traducoes: {
+                    select: {
+                        language: true,
+                        url_imagem: true
+                    }
+                }
+            }
+        });
 
   // Se a lista voltar vazia, a carta não existe
   if (cartas.length === 0) {

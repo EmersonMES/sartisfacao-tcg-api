@@ -340,6 +340,48 @@ app.get('/api/dashboard', async (request: any, reply) => {
             pular += tamanhoLote; 
         }
 
+        // 🏴‍☠️ O SISTEMA DE LOTES DO ONE PIECE 🏴‍☠️
+        let pularOP = 0;
+        let temMaisOP = true;
+
+        while (temMaisOP) {
+            const loteOP = await prisma.cartaOnePiece.findMany({
+                skip: pularOP,
+                take: tamanhoLote,
+                select: { colecao: true, id_oficial: true, url_imagem: true }
+            });
+
+            if (loteOP.length === 0) {
+                temMaisOP = false;
+                break;
+            }
+
+            loteOP.forEach((carta: any) => {
+                // Adicionamos o prefixo "One Piece:" para não se misturar com as coleções de Pokémon
+                const setNome = "One Piece: " + (carta.colecao || 'Desconhecida');
+
+                if (!relatorio[setNome]) {
+                    relatorio[setNome] = {
+                        nome: setNome,
+                        totalOficial: 0, 
+                        cartasUnicas: new Set(),
+                        idiomas: { 'English': { cards: 0, images: 0 } } // One Piece assumimos Inglês padrão
+                    };
+                    idiomasGlobais.add('English');
+                }
+
+                relatorio[setNome].cartasUnicas.add(carta.id_oficial);
+                
+                // Adiciona estatísticas base
+                relatorio[setNome].idiomas['English'].cards++;
+                if (carta.url_imagem && carta.url_imagem.trim() !== '') {
+                    relatorio[setNome].idiomas['English'].images++;
+                }
+            });
+
+            pularOP += tamanhoLote;
+        }
+
         // Limpeza dos Dados Finais
         Object.values(relatorio).forEach((set: any) => {
             const qtdReal = set.cartasUnicas.size;

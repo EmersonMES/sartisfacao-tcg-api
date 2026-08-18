@@ -241,14 +241,9 @@ app.put('/cartas/correcao', async (request: any, reply) => {
 // ==========================================
 app.get('/api/dashboard', async (request: any, reply) => {
     try {
-        const cartas = await prisma.card.findMany({
-            include: { traducoes: true }
-        });
-
         const relatorio: any = {};
         const idiomasGlobais = new Set<string>();
 
-        // O TRADUTOR UNIVERSAL: Junta os dados antigos (Scrydex) e os novos (TCGDex)
         const mapaIdiomas: { [key: string]: string } = {
             'EN': 'English', 'ENGLISH': 'English',
             'PT': 'Portuguese (Brazil)', 'PORTUGUESE_BRAZIL': 'Portuguese (Brazil)',
@@ -269,50 +264,83 @@ app.get('/api/dashboard', async (request: any, reply) => {
             'NL': 'Dutch', 'DUTCH': 'Dutch'
         };
 
-        cartas.forEach((carta: any) => {
-            const setNome = carta.colecao;
+        // 🚛 O SISTEMA DE LOTES (BATCHING) 🚛
+        let pular = 0;
+        const tamanhoLote = 2000; // Pega 2.000 cartas por viagem
+        let temMaisCartas = true;
 
-            if (!relatorio[setNome]) {
-                relatorio[setNome] = {
-                    nome: setNome,
-                    totalOficial: 0,
-                    cartasUnicas: new Set(),
-                    idiomas: {}
-                };
-            }
-
-            relatorio[setNome].cartasUnicas.add(carta.id_oficial);
-
-            if (carta.numero && carta.numero.includes('/')) {
-                const partes = carta.numero.split('/');
-                const denom = partes[partes.length - 1]; 
-                const numParsed = parseInt(denom.replace(/\D/g, ''), 10);
-                
-                if (!isNaN(numParsed) && numParsed > relatorio[setNome].totalOficial) {
-                    relatorio[setNome].totalOficial = numParsed;
-                }
-            }
-
-            carta.traducoes.forEach((trad: any) => {
-                const langBruto = trad.language.toUpperCase();
-                
-                // Limpa o nome do idioma. Se não achar no mapa, usa o bruto.
-                const langLimpo = mapaIdiomas[langBruto] || langBruto; 
-
-                idiomasGlobais.add(langLimpo); // Adiciona o nome limpo à lista global
-
-                if (!relatorio[setNome].idiomas[langLimpo]) {
-                    relatorio[setNome].idiomas[langLimpo] = { cards: 0, images: 0 };
-                }
-
-                // Soma os valores nas gavetas fundidas!
-                relatorio[setNome].idiomas[langLimpo].cards++;
-                if (trad.url_imagem && trad.url_imagem.trim() !== '') {
-                    relatorio[setNome].idiomas[langLimpo].images++;
+        while (temMaisCartas) {
+            const lote = await prisma.card.findMany({
+                skip: pular,
+                take: tamanhoLote,
+                select: {
+                    colecao: true,
+                    id_oficial: true,
+                    numero: true,
+                    traducoes: {
+                        select: {
+                            language: true,
+                            url_imagem: true
+                        }
+                    }
                 }
             });
-        });
 
+            // Se a carrinha voltar vazia, acabaram as cartas no banco de dados!
+            if (lote.length === 0) {
+                temMaisCartas = false;
+                break;
+            }
+
+            // Processa apenas estas 2.000 cartas
+            lote.forEach((carta: any) => {
+                const setNome = carta.colecao || 'Desconhecida';
+
+                if (!relatorio[setNome]) {
+                    relatorio[setNome] = {
+                        nome: setNome,
+                        totalOficial: 0,
+                        cartasUnicas: new Set(),
+                        idiomas: {}
+                    };
+                }
+
+                relatorio[setNome].cartasUnicas.add(carta.id_oficial);
+
+                if (carta.numero && carta.numero.includes('/')) {
+                    const partes = carta.numero.split('/');
+                    const denom = partes[partes.length - 1]; 
+                    const numParsed = parseInt(denom.replace(/\D/g, ''), 10);
+                    
+                    if (!isNaN(numParsed) && numParsed > relatorio[setNome].totalOficial) {
+                        relatorio[setNome].totalOficial = numParsed;
+                    }
+                }
+
+                if (carta.traducoes && carta.traducoes.length > 0) {
+                    carta.traducoes.forEach((trad: any) => {
+                        const langBruto = trad.language ? trad.language.toUpperCase() : 'UNKNOWN';
+                        const langLimpo = mapaIdiomas[langBruto] || langBruto; 
+
+                        idiomasGlobais.add(langLimpo); 
+
+                        if (!relatorio[setNome].idiomas[langLimpo]) {
+                            relatorio[setNome].idiomas[langLimpo] = { cards: 0, images: 0 };
+                        }
+
+                        relatorio[setNome].idiomas[langLimpo].cards++;
+                        if (trad.url_imagem && trad.url_imagem.trim() !== '') {
+                            relatorio[setNome].idiomas[langLimpo].images++;
+                        }
+                    });
+                }
+            });
+
+            // Avisa a próxima viagem para começar de onde esta parou
+            pular += tamanhoLote; 
+        }
+
+        // Limpeza dos Dados Finais
         Object.values(relatorio).forEach((set: any) => {
             const qtdReal = set.cartasUnicas.size;
             if (set.totalOficial < qtdReal) {
@@ -321,10 +349,11 @@ app.get('/api/dashboard', async (request: any, reply) => {
             delete set.cartasUnicas; 
         });
 
-        return {
+        // Envia para o Front-end
+        return reply.send({
             colecoes: Object.values(relatorio).sort((a: any, b: any) => a.nome.localeCompare(b.nome)),
-            idiomasAtivos: Array.from(idiomasGlobais).sort() // Envia a lista limpa e ordenada
-        };
+            idiomasAtivos: Array.from(idiomasGlobais).sort() 
+        });
 
     } catch (erro) {
         console.error("❌ Erro ao gerar dashboard:", erro);

@@ -34,3 +34,26 @@ model CardTranslation {
 
   @@unique([card_id, language])
 }
+
+model CartaOnePiece {
+  id_oficial  String   @id // Ex: OP01-001
+  nome        String
+  colecao     String   // Ex: Romance Dawn
+  raridade    String   // Ex: L, SR, SEC, C, UC
+  tipo        String   // Leader, Character, Event, Stage
+  cores       String   // Red, Green, Blue... (Pode ter mais de uma)
+  atributo    String?  // Strike, Slash, Ranged, Special, Wisdom
+  
+  // Status Numéricos
+  custo       Int?     // Leaders não têm custo
+  power       Int?     // Events e Stages não têm power
+  counter     Int?     // Apenas Characters têm counter (ex: +1000, +2000)
+  vida        Int?     // Apenas Leaders têm Life (ex: 4, 5)
+  
+  // Textos e Regras
+  efeito      String?  @db.Text
+  trigger     String?  @db.Text
+  
+  // Imagens
+  url_imagem  String?
+}

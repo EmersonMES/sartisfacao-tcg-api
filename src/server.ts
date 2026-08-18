@@ -361,6 +361,38 @@ app.get('/api/dashboard', async (request: any, reply) => {
     }
 });
 
+// 🏴‍☠️ ROTA DE BUSCA DO ONE PIECE TCG 🏴‍☠️
+app.get('/api/onepiece/busca/:nome', async (request: any, reply) => {
+    try {
+        const { nome } = request.params;
+        
+        // O Prisma vai vasculhar a nova tabela 'cartaOnePiece'
+        const cartas = await prisma.cartaOnePiece.findMany({
+            where: {
+                nome: {
+                    contains: nome,
+                    mode: 'insensitive' // Ignora maiúsculas e minúsculas
+                }
+            },
+            // Organiza por coleção e depois pelo número oficial
+            orderBy: [
+                { colecao: 'asc' },
+                { id_oficial: 'asc' }
+            ]
+        });
+
+        if (cartas.length === 0) {
+            return reply.status(404).send({ erro: 'Nenhum pirata ou carta encontrada no Multiverso OP.' });
+        }
+
+        return reply.send(cartas);
+        
+    } catch (erro) {
+        console.error("❌ Erro ao buscar cartas de One Piece:", erro);
+        return reply.status(500).send({ erro: 'Erro interno ao consultar o Multiverso OP.' });
+    }
+});
+
 // ==========================================
 // INICIALIZAÇÃO DO SERVIDOR (NUVEM E LOCAL)
 // ==========================================

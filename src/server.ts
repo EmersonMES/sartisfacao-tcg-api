@@ -348,7 +348,7 @@ app.get('/api/dashboard', async (request: any, reply) => {
             const loteOP = await prisma.cartaOnePiece.findMany({
                 skip: pularOP,
                 take: tamanhoLote,
-                select: { colecao: true, id_oficial: true, url_imagem: true }
+                select: { colecao: true, id_oficial: true, url_imagem: true, idioma: true } // Agora pedimos o idioma!
             });
 
             if (loteOP.length === 0) {
@@ -357,25 +357,32 @@ app.get('/api/dashboard', async (request: any, reply) => {
             }
 
             loteOP.forEach((carta: any) => {
-                // Adicionamos o prefixo "One Piece:" para não se misturar com as coleções de Pokémon
                 const setNome = "One Piece: " + (carta.colecao || 'Desconhecida');
+                const idiomaCarta = carta.idioma || 'English'; // Se não tiver, assume inglês
 
                 if (!relatorio[setNome]) {
                     relatorio[setNome] = {
                         nome: setNome,
                         totalOficial: 0, 
                         cartasUnicas: new Set(),
-                        idiomas: { 'English': { cards: 0, images: 0 } } // One Piece assumimos Inglês padrão
+                        idiomas: {} 
                     };
-                    idiomasGlobais.add('English');
                 }
 
+                // Regista este idioma globalmente
+                idiomasGlobais.add(idiomaCarta);
+
+                if (!relatorio[setNome].idiomas[idiomaCarta]) {
+                    relatorio[setNome].idiomas[idiomaCarta] = { cards: 0, images: 0 };
+                }
+
+                // A carta oficial (ex: OP01-001) conta apenas 1 vez para o total da coleção
                 relatorio[setNome].cartasUnicas.add(carta.id_oficial);
                 
-                // Adiciona estatísticas base
-                relatorio[setNome].idiomas['English'].cards++;
+                // Soma estatísticas para este idioma específico
+                relatorio[setNome].idiomas[idiomaCarta].cards++;
                 if (carta.url_imagem && carta.url_imagem.trim() !== '') {
-                    relatorio[setNome].idiomas['English'].images++;
+                    relatorio[setNome].idiomas[idiomaCarta].images++;
                 }
             });
 

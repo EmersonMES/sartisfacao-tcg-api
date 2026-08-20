@@ -3,72 +3,87 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log("🏴‍☠️ Iniciando a Grande Frota: Importação em Massa do One Piece...");
+    console.log("🏴‍☠️ Iniciando a Grande Frota: Importação Oficial da API optcgapi...");
 
-    // NOTA DO ARQUITETO: Quando encontrar o link do JSON de One Piece, coloque-o aqui.
-    // Exemplo fictício: const urlAPI = 'https://raw.githubusercontent.com/comunidade/op-tcg/main/cartas.json';
-    const urlAPI = 'COLOQUE_A_URL_DO_JSON_AQUI'; 
+    // A URL que você descobriu na documentação
+    const urlAPI = 'https://www.optcgapi.com/api/allSetCards/'; 
 
     try {
-        /* DESCOMENTE ESTAS LINHAS QUANDO TIVER A URL REAL
-        const resposta = await fetch(urlAPI);
+        console.log("📡 A estabelecer ligação com a Grand Line (optcgapi.com)...");
+        
+        // Adicionamos um cabeçalho (User-Agent) para não sermos bloqueados pelo servidor deles
+        const resposta = await fetch(urlAPI, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) SartisfacaoTCG/1.0',
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!resposta.ok) {
+            throw new Error(`O servidor rejeitou a entrada: ${resposta.status} - ${resposta.statusText}`);
+        }
+
         const dadosBrutos = await resposta.json();
         
-        // Algumas APIs guardam as cartas dentro de um array chamado "data" ou "cards".
-        const dados = dadosBrutos.data || dadosBrutos; 
-        */
+        // O Django REST Framework costuma devolver diretamente a lista de cartas
+        const dados = Array.isArray(dadosBrutos) ? dadosBrutos : (dadosBrutos.data || []);
 
-        // DADOS DE TESTE (Para provar que o script funciona)
-        // Apague este bloco quando ativar o Fetch acima.
-        const dados = [
-            { id: "OP01-002", name: "Trafalgar Law", set: "Romance Dawn", rarity: "L", type: "Leader", color: "Red/Green", life: "4", power: "5000", effect: "Efeito incrivel aqui", image_url: "https://asia-en.onepiece-cardgame.com/images/cardlist/card/OP01-002.png" },
-            { id: "OP01-003", name: "Monkey D. Luffy", set: "Romance Dawn", rarity: "C", type: "Character", color: "Red", cost: "2", power: "3000", image_url: "https://asia-en.onepiece-cardgame.com/images/cardlist/card/OP01-003.png" }
-        ];
+        if (dados.length === 0) {
+            throw new Error("A API respondeu, mas não enviou nenhuma carta.");
+        }
 
-        console.log(`🗺️ Encontradas ${dados.length} cartas no mapa. Iniciando injeção...`);
+        console.log(`🗺️ Jackpot! Encontradas ${dados.length} cartas. Iniciando a ancoragem no Supabase...`);
 
         let contador = 0;
+        let erros = 0;
 
         for (const item of dados) {
-            // O TRADUTOR UNIVERSAL: Mapeia o JSON da internet para a SUA tabela
-            const cartaFormatada = {
-                id_oficial: item.id || item.id_oficial,
-                nome: item.name || item.nome || "Desconhecido",
-                colecao: item.set || item.colecao || "Promo",
-                raridade: item.rarity || item.raridade || "C",
-                tipo: item.type || item.tipo || "Character",
-                cores: item.color || item.cores || "Unknown",
-                atributo: item.attribute || item.atributo || null,
-                
-                // Converte strings para números em segurança
-                custo: item.cost ? parseInt(item.cost) : null,
-                power: item.power ? parseInt(item.power) : null,
-                counter: item.counter ? parseInt(item.counter) : null,
-                vida: item.life ? parseInt(item.life) : null,
-                
-                efeito: item.effect || item.efeito || null,
-                trigger: item.trigger || null,
-                url_imagem: item.image_url || item.url_imagem || null
-            };
+            try {
+                // O TRADUTOR CALIBRADO PARA A SUA IMAGEM
+                const cartaFormatada = {
+                    id_oficial: item.card_set_id || `SEM-ID-${contador}`,
+                    nome: item.card_name || "Desconhecido",
+                    colecao: item.set_name || "Coleção Desconhecida",
+                    raridade: item.rarity || "C",
+                    tipo: item.card_type || "Character",
+                    cores: item.card_color || "Unknown",
+                    atributo: item.attribute || null,
+                    
+                    // A API manda números como strings ("1", "2000"), precisamos converter para Int
+                    custo: item.card_cost ? parseInt(item.card_cost) : null,
+                    power: item.card_power ? parseInt(item.card_power) : null,
+                    counter: item.counter_amount ? parseInt(item.counter_amount) : null,
+                    vida: item.life ? parseInt(item.life) : null,
+                    
+                    efeito: item.card_text || null,
+                    trigger: null, // A API não parece separar o trigger, vem tudo no card_text
+                    url_imagem: item.card_image || null
+                };
 
-            // Injeta no banco: se já existir, atualiza. Se não existir, cria.
-            await prisma.cartaOnePiece.upsert({
-                where: { id_oficial: cartaFormatada.id_oficial },
-                update: cartaFormatada,
-                create: cartaFormatada
-            });
+                // Injeção segura no Supabase
+                await prisma.cartaOnePiece.upsert({
+                    where: { id_oficial: cartaFormatada.id_oficial },
+                    update: cartaFormatada,
+                    create: cartaFormatada
+                });
 
-            contador++;
-            // Avisa no terminal a cada 100 cartas para sabermos que não travou
-            if (contador % 100 === 0) {
-                console.log(`⏳ Progresso: ${contador} cartas ancoradas no banco de dados...`);
+                contador++;
+                
+                // Mostra no terminal a cada 100 cartas
+                if (contador % 100 === 0) {
+                    console.log(`⏳ Progresso: ${contador} cartas devidamente guardadas...`);
+                }
+            } catch (errCarta) {
+                erros++;
             }
         }
 
-        console.log(`✅ Sucesso Absoluto! ${contador} cartas de One Piece foram adicionadas ao Multiverso.`);
+        console.log(`\n👑 MISSÃO CONCLUÍDA COM SUCESSO! 👑`);
+        console.log(`✅ Total de Cartas Importadas: ${contador}`);
+        if (erros > 0) console.log(`⚠️ Erros (Cartas Ignoradas): ${erros}`);
 
     } catch (erro) {
-        console.error("❌ O navio afundou durante a importação:", erro);
+        console.error("❌ Ocorreu um problema grave durante a importação:", erro);
     }
 }
 
